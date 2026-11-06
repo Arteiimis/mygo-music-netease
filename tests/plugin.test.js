@@ -245,7 +245,8 @@ test("the liked-songs playlist is the listener's own", async () => {
     ] };
   }, { signedIn: true });
   const lists = await h.plugin.playlists();
-  assert.deepEqual(lists.map(p => [p.id, p.mine]), [["7", true], ["8", true], ["9", false]]);
+  // NetEase keeps the liked-songs playlist itself: the host offers it no edits.
+  assert.deepEqual(lists.map(p => [p.id, p.mine, p.fixed]), [["7", true, true], ["8", true, false], ["9", false, false]]);
 });
 
 // NetEase takes no edits of that playlist, and the host offers them for every
@@ -261,8 +262,8 @@ test("the liked-songs playlist refuses edits before any request", async () => {
   ]) await assert.rejects(edit(), { code: "unsupported" });
 });
 
-// The daily card opens a page of the section it leads, so the section carries
-// what that page is headed with: the day over the cover, and why it was picked.
+// The daily card opens a page of the section it leads, so the section says what
+// that page is headed with; the host counts the songs and follows the subtitle.
 test("the daily card's section heads the page it opens", async () => {
   const h = await harness(({ path, params }) => {
     if (path === "/api/v3/discovery/recommend/songs") return { data: { dailySongs: [song(1)] } };
@@ -273,8 +274,7 @@ test("the daily card's section heads the page it opens", async () => {
   }, { signedIn: true });
   const [daily] = (await h.plugin.home()).sections;
   assert.equal(daily.morePage, undefined);
-  assert.deepEqual([daily.kicker, daily.pageTitle, daily.hero, daily.subtitle], [
-    "Daily Recommendations", "Daily Song Recommendations", "daily",
-    "1 songs · Picked for your taste, updated daily at 06:00",
+  assert.deepEqual([daily.pageTitle, daily.subtitle], [
+    "Daily Song Recommendations", "Picked for your taste, updated daily at 06:00",
   ]);
 });

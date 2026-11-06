@@ -265,6 +265,10 @@ function toPlaylist(p) {
     // NetEase's liked-songs playlist is the listener's own too: its creator is
     // the account, and it is the one playlist NetEase makes for them.
     mine: !!accountNow() && (p.specialType === 5 || String(p.creator?.userId) === accountNow().id),
+    // NetEase keeps that one itself: a song joins it by being liked, and it takes
+    // no renaming, deleting or reordering. Hosts before 0.1.17 ignore this and
+    // offer those, which keepLiked turns down.
+    fixed: p.specialType === 5,
     saved: !!p.subscribed,
   };
 }
@@ -360,18 +364,17 @@ export async function home() {
   }
   const sections = [];
   // The host renders the first track section with its native daily recommendation
-  // card, which opens a page of it headed as the app's own daily page is: a
-  // kicker over the title, why the songs were picked, and the day over the cover.
-  // A host that knows none of these ignores them, and the page stays as it was.
+  // card, which opens a page of it headed as the app's own daily page is: the day
+  // over the cover, that day's date, and why the songs were picked. A host that
+  // doesn't know these ignores them, and the page takes the card's title.
   if (songs.status === "fulfilled" && songs.value.length) {
     sections.push({
       title: tr("Daily Recommendations"),
-      kicker: tr("Daily Recommendations"),
       pageTitle: tr("Daily Song Recommendations"),
+      // The host counts the songs itself and follows it with this.
       subtitle: accountNow()
-        ? tr("{count} songs · Picked for your taste, updated daily at 06:00", { count: songs.value.length })
-        : tr("{count} songs · Sign in for recommendations picked for you", { count: songs.value.length }),
-      hero: "daily",
+        ? tr("Picked for your taste, updated daily at 06:00")
+        : tr("Sign in for recommendations picked for you"),
       tracks: songs.value,
     });
   }
@@ -525,8 +528,8 @@ function rememberTrack(track) {
 
 // NetEase's liked-songs playlist is the listener's, but NetEase takes no
 // renaming, deleting, reordering or adding to it: a song joins it by being
-// liked. The host offers those for every playlist of theirs, so say why this
-// one takes none.
+// liked. A host that knows `fixed` leaves those out; one before 0.1.17 offers
+// them for every playlist of theirs, so say why this one takes none.
 function keepLiked(pid) {
   const me = accountNow();
   if (me && String(pid) === me.id) {
